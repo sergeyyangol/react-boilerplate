@@ -6,45 +6,75 @@
  * contain code that should be seen on all pages. (e.g. navigation bar)
  */
 
-import React from 'react';
+import React, { Fragment } from 'react';
 import { Helmet } from 'react-helmet';
-import styled from 'styled-components';
-import { Switch, Route } from 'react-router-dom';
+import { MuiThemeProvider } from '@material-ui/core/styles';
+import { compose } from 'redux';
+import { createStructuredSelector } from 'reselect';
+import { connect } from 'react-redux';
+import PropTypes from 'prop-types';
 
-import HomePage from 'containers/HomePage/Loadable';
-import FeaturePage from 'containers/FeaturePage/Loadable';
-import NotFoundPage from 'containers/NotFoundPage/Loadable';
-import Header from 'components/Header';
-import Footer from 'components/Footer';
+import { useInjectReducer } from 'utils/injectReducer';
+// import { useInjectSaga } from 'utils/injectSaga';
+import Header from '../Header';
+
+import reducer from './reducer';
+// import saga from './saga';
+import { makeSelectGlobal } from './selectors';
 
 import GlobalStyle from '../../global-styles';
+import darkTheme from '../../themes/dark-theme';
+import lightTheme from '../../themes/light-theme';
+import routes from '../../router';
 
-const AppWrapper = styled.div`
-  max-width: calc(768px + 16px * 2);
-  margin: 0 auto;
-  display: flex;
-  min-height: 100%;
-  padding: 0 16px;
-  flex-direction: column;
-`;
+function App({ global: { theme } }) {
+  const key = 'global';
+  useInjectReducer({ key, reducer });
+  // useInjectSaga({ key, saga });
 
-export default function App() {
+  const getTheme = storeTheme => {
+    let chosenTheme;
+    if (storeTheme === 'light') chosenTheme = lightTheme;
+    else if (storeTheme === 'dark') chosenTheme = darkTheme;
+    return chosenTheme;
+  };
+
   return (
-    <AppWrapper>
-      <Helmet
-        titleTemplate="%s - React.js Boilerplate"
-        defaultTitle="React.js Boilerplate"
-      >
-        <meta name="description" content="A React.js Boilerplate application" />
-      </Helmet>
-      <Header />
-      <Switch>
-        <Route exact path="/" component={HomePage} />
-        <Route path="/features" component={FeaturePage} />
-        <Route path="" component={NotFoundPage} />
-      </Switch>
-      <Footer />
-      <GlobalStyle />
-    </AppWrapper>
+    <Fragment>
+      <MuiThemeProvider theme={getTheme(theme)}>
+        <Helmet
+          titleTemplate="%s - React.js Boilerplate"
+          defaultTitle="React.js Boilerplate"
+        >
+          <meta
+            name="description"
+            content="A React.js Boilerplate application"
+          />
+        </Helmet>
+        <Header>{routes()}</Header>
+        <GlobalStyle />
+      </MuiThemeProvider>
+    </Fragment>
   );
 }
+
+App.propTypes = {
+  global: PropTypes.object,
+};
+
+const mapStateToProps = createStructuredSelector({
+  global: makeSelectGlobal(),
+});
+
+export function mapDispatchToProps(dispatch) {
+  return {
+    dispatch,
+  };
+}
+
+const withConnect = connect(
+  mapStateToProps,
+  mapDispatchToProps,
+);
+
+export default compose(withConnect)(App);
